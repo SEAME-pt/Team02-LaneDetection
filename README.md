@@ -127,7 +127,3 @@ python inference.py
 * TuSimple for providing the lane detection dataset
 * CARLA Simulator for synthetic data generation
 
-```
-
-Would you like this saved as a `.md` file for download?
-```
