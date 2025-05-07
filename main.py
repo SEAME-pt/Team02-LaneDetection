@@ -90,8 +90,8 @@ def main():
         replacement=True
     )
 
-    print(f"Created weighted sampler: TuSimple={tusimple_weight:.4f}, SEA={sea_weight:.4f}, Carla={car:.4f}")
-    
+    print(f"Created weighted sampler: TuSimple={tusimple_weight:.4f}, SEA={sea_weight:.4f}, Carla={carla_weight:.4f}")
+
     # Create dataloaders
     train_loader = DataLoader(
         train_dataset, 
