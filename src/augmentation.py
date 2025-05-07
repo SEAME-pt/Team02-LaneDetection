@@ -73,22 +73,19 @@ class LaneDetectionAugmentation:
         
         Args:
             image: Input image (H, W, C) as numpy array
-            mask: Binary mask (H, W) or (1, H, W) as numpy array
+            mask: Binary mask (C, H, W) as numpy array
                 
         Returns:
             transformed_image: Transformed image as tensor
             transformed_mask: Transformed mask as tensor
         """
-        # If mask has a channel dimension, remove it for albumentations
-        if len(mask.shape) == 3 and mask.shape[0] == 1:
-            mask = mask.squeeze(0)  # Remove channel dimension
+        
+        mask = mask.transpose(1, 2, 0)
         
         transformed = self.transform(image=image, mask=mask)
         transformed_image = transformed['image']
         transformed_mask = transformed['mask']
         
-        # Ensure mask has channel dimension [1, H, W]
-        if len(transformed_mask.shape) == 2:
-            transformed_mask = transformed_mask.unsqueeze(0)
+        transformed_mask = transformed_mask.permute(2, 0, 1)
             
         return transformed_image, transformed_mask
