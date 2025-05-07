@@ -78,7 +78,7 @@ def main():
     for i in range(train_dataset.train_size):
         if i < train_tusimple_size:
             weights[i] = tusimple_weight
-        elif i < train_tusimple_size + train_sea_size:  # Fix this
+        elif i < train_tusimple_size + train_sea_size:
             weights[i] = sea_weight
         else:
             weights[i] = carla_weight

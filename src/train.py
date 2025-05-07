@@ -67,13 +67,13 @@ def train_model(model, train_loader, criterion, optimizer, device, epochs=10):
         
         # # Print epoch results
         # print(f'\nEpoch {epoch+1}/{epochs}:')
-        # print(f'  Training Loss: {avg_train_loss:.4f}')
         # print(f'  Validation Loss: {avg_val_loss:.4f}')
         
         # # Save model if validation loss improved
         # if avg_val_loss < best_val_loss:
         #     best_val_loss = avg_val_loss
-        print(f'  Validation loss improved! Saving model...')
+        print(f'  Training Loss: {avg_train_loss:.4f}')
+        # print(f'  Validation loss improved! Saving model...')
         torch.save(model.state_dict(), f'Models/lane/lane_UNet1_epoch_{epoch+1}.pth')
     
     print(f'Training completed. Best validation loss: {best_val_loss:.4f}')

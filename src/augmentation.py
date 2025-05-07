@@ -53,7 +53,7 @@ class LaneDetectionAugmentation:
             ], p=0.5),
             
             # Mild perspective transform to simulate camera angle changes
-            A.Perspective(scale=(0.05, 0.15), keep_size=True, fit_output=True, p=0.5),
+            # A.Perspective(scale=(0.05, 0.15), keep_size=True, fit_output=True, p=0.5),
             
             # Light blur to simulate motion/focus issues
             A.OneOf([
@@ -73,19 +73,22 @@ class LaneDetectionAugmentation:
         
         Args:
             image: Input image (H, W, C) as numpy array
-            mask: Binary mask (C, H, W) as numpy array
+            mask: Binary mask (H, W) or (1, H, W) as numpy array
                 
         Returns:
             transformed_image: Transformed image as tensor
             transformed_mask: Transformed mask as tensor
         """
-        
-        mask = mask.transpose(1, 2, 0)
+        # If mask has a channel dimension, remove it for albumentations
+        if len(mask.shape) == 3 and mask.shape[0] == 1:
+            mask = mask.squeeze(0)  # Remove channel dimension
         
         transformed = self.transform(image=image, mask=mask)
         transformed_image = transformed['image']
         transformed_mask = transformed['mask']
         
-        transformed_mask = transformed_mask.permute(2, 0, 1)
+        # Ensure mask has channel dimension [1, H, W]
+        if len(transformed_mask.shape) == 2:
+            transformed_mask = transformed_mask.unsqueeze(0)
             
         return transformed_image, transformed_mask
