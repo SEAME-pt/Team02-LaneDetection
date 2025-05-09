@@ -21,8 +21,16 @@ else:
 
 # Load the trained model
 model = UNet().to(device)
-model.load_state_dict(torch.load('Models/lane/lane_unet1_epoch_4.pth', map_location=device))
+model.load_state_dict(torch.load('Models/lane/lane_UNet1_epoch_25.pth', map_location=device))
 model.eval()
+
+
+src_pts = np.float32([
+    [248.0, 81.0],
+    [394.0, 81.0],
+    [32.0, 456.0],
+    [608.0, 456.0],
+])
 
 # Image preprocessing function
 def preprocess_image(image, target_size=(256, 128)):
@@ -56,10 +64,56 @@ def overlay_predictions(image, prediction, threshold=0.6):
     # Create a colored overlay
     colored_mask = np.zeros_like(image)
     colored_mask[lane_mask > 0] = [0, 255, 0]  # Green for lane markings
+
+    image, _ = get_bird_eye_view(image, None, src_pts=src_pts, extended_view=True)
+    _, colored_mask = get_bird_eye_view(None, colored_mask, src_pts=src_pts, extended_view=True)
     
     # Apply the overlay with transparency
     overlay = cv2.addWeighted(image, 0.7, colored_mask, 0.3, 0)
     return overlay
+    
+
+def get_bird_eye_view(image, mask=None, src_pts=None, dst_pts=None, extended_view=True):
+    """
+    Transform image and/or mask to bird's eye view with extended road visibility
+    """
+    h, w = image.shape[:2] if image is not None else mask.shape[:2]
+    
+    # Default source points if not provided
+    if src_pts is None:
+        src_pts = np.float32([
+            [w * 0.40, h * 0.45],  # Top left (higher up)
+            [w * 0.60, h * 0.45],  # Top right (higher up)
+            [w * 0.05, h * 0.95],  # Bottom left
+            [w * 0.95, h * 0.95]   # Bottom right
+        ])
+    
+    # Create non-linear transformation for better distance perception
+    if dst_pts is None:
+        bev_width, bev_height = w, h
+        margin = int(bev_width * 0.1)
+        
+        dst_pts = np.float32([
+            [bev_width * 0.25, 0],                # Top left (closer to center)
+            [bev_width * 0.75, 0],                # Top right (closer to center) 
+            [margin, bev_height],                 # Bottom left
+            [bev_width - margin, bev_height]      # Bottom right
+        ])
+
+    # Compute the perspective transform matrix
+    M = cv2.getPerspectiveTransform(src_pts, dst_pts)
+    
+    # Apply the transform
+    bev_image = None
+    if image is not None:
+        bev_image = cv2.warpPerspective(image, M, (w, h), flags=cv2.INTER_LINEAR)
+    
+    bev_mask = None
+    if mask is not None:
+        bev_mask = cv2.warpPerspective(mask, M, (w, h), flags=cv2.INTER_NEAREST)
+    
+    return bev_image, bev_mask
+
 
 # Open video
 cap = cv2.VideoCapture("assets/seame_data.mp4")
