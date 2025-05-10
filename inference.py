@@ -45,32 +45,104 @@ def preprocess_image(image, target_size=(256, 128)):
     
     return img_tensor, img
 
-def connect_lanes(lane_mask, kernel_size=8, minarea_threshold=40):
+def connect_lanes(lane_mask, kernel_size=8, minarea_threshold=40, max_lanes=3):
+    """
+    Connect lane segments and keep only the largest ones
+    
+    Args:
+        lane_mask: Binary mask of lane detections
+        kernel_size: Size of kernel for morphological operations
+        minarea_threshold: Minimum area to consider as valid lane
+        max_lanes: Maximum number of lanes to keep (largest ones)
+    """
     # Ensure input is binary uint8 image
     if lane_mask.dtype is not np.uint8:
         lane_mask = np.array(lane_mask, np.uint8)
-        if len(lane_mask.shape) == 3:
-            lane_mask = cv2.cvtColor(lane_mask, cv2.COLOR_BGR2GRAY)
+    if len(lane_mask.shape) == 3:
+        lane_mask = cv2.cvtColor(lane_mask, cv2.COLOR_BGR2GRAY)
 
-        # fill the pixel gap using Closing operator (dilation followed by
-        # erosion)
-        kernel = cv2.getStructuringElement(
-            shape=cv2.MORPH_RECT, ksize=(
-                kernel_size, kernel_size))
+    # Fill the pixel gap using Closing operator (dilation followed by erosion)
+    kernel = cv2.getStructuringElement(
+        shape=cv2.MORPH_RECT, ksize=(
+            kernel_size, kernel_size))
+
+    lane_mask = cv2.morphologyEx(lane_mask, cv2.MORPH_CLOSE, kernel)
+
+    # Find connected components
+    ccs = cv2.connectedComponentsWithStats(
+        lane_mask, connectivity=8, ltype=cv2.CV_32S)
+    labels = ccs[1]
+    stats = ccs[2]
+    centroids = ccs[3]
     
-        lane_mask = cv2.morphologyEx(lane_mask, cv2.MORPH_CLOSE, kernel)
-
-        ccs = cv2.connectedComponentsWithStats(
-            lane_mask, connectivity=8, ltype=cv2.CV_32S)
-        labels = ccs[1]
-        stats = ccs[2]
-
-        for index, stat in enumerate(stats):
-            if stat[4] <= minarea_threshold:
-                idx = np.where(labels == index)
-                lane_mask[idx] = 0
-
-        return lane_mask
+    # Create a list of valid components (excluding background which is index 0)
+    valid_components = []
+    for i in range(1, len(stats)):
+        area = stats[i][cv2.CC_STAT_AREA]
+        if area > minarea_threshold:
+            # Get centroid x-position
+            center_x = centroids[i][0]
+            valid_components.append((i, area, center_x))
+    
+    # Sort components by area (largest first)
+    area_sorted = sorted(valid_components, key=lambda x: x[1], reverse=True)
+    
+    # Keep only the largest max_lanes components
+    keep_components = area_sorted[:max_lanes]
+    
+    # Create a new mask with only these lanes
+    result_mask = np.zeros_like(lane_mask)
+    for comp_idx, _, _ in keep_components:
+        result_mask[labels == comp_idx] = 255
+    
+    return result_mask
+    
+def color_individual_lanes(lane_mask, min_area=50):
+    """
+    Color lanes based on their horizontal position: left=red, center=yellow, right=green
+    """
+    # Ensure binary uint8 image
+    if lane_mask.dtype is not np.uint8:
+        lane_mask = np.array(lane_mask, np.uint8)
+    if len(lane_mask.shape) == 3:
+        lane_mask = cv2.cvtColor(lane_mask, cv2.COLOR_BGR2GRAY)
+    
+    # Create a colored mask (3-channel)
+    colored_lanes = np.zeros((lane_mask.shape[0], lane_mask.shape[1], 3), dtype=np.uint8)
+    
+    # Find connected components
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
+        lane_mask, connectivity=8, ltype=cv2.CV_32S)
+    
+    # Define standard colors for lane positions
+    lane_position_colors = [
+        [0, 0, 255],    # Left lane: Red
+        [0, 255, 255],  # Center lane: Yellow
+        [0, 255, 0]     # Right lane: Green
+    ]
+    
+    # Create a list of valid components with their centroids
+    valid_components = []
+    for i in range(1, num_labels):
+        area = stats[i, cv2.CC_STAT_AREA]
+        if area > min_area:
+            # Get centroid x-position
+            center_x = centroids[i][0]
+            valid_components.append((i, center_x))
+    
+    # Sort by x-position (left to right)
+    valid_components.sort(key=lambda x: x[1])
+    
+    # Color lanes based on their sorted position
+    for idx, (comp_idx, _) in enumerate(valid_components):
+        # Get this lane's mask
+        lane = (labels == comp_idx)
+        
+        # Assign a color based on position (cycle through our 3 colors if more than 3 lanes)
+        color = lane_position_colors[min(idx, len(lane_position_colors)-1)]
+        colored_lanes[lane] = color
+    
+    return colored_lanes
     
 # Update your overlay_predictions function
 def overlay_predictions(image, prediction, threshold=0.5):
@@ -83,24 +155,15 @@ def overlay_predictions(image, prediction, threshold=0.5):
     
     # Apply lane connection post-processing
     mask = connect_lanes(lane_mask_resized)
-    
-    # # ADDED: Clean up noise in the connected mask
-    # mask = clean_lane_noise(
-    #     mask, 
-    #     min_area=50,               # Adjust based on your image resolution
-    #     aspect_ratio_threshold=1.5  # Higher = more elongated shapes kept
-    # )
-    
-    # Create a colored overlay
-    colored_mask = np.zeros_like(image)
-    colored_mask[mask > 0] = [0, 255, 0]  # Green for lane markings
+
+    colored_mask = color_individual_lanes(mask, min_area=50)
     
     # Apply the overlay with transparency
     overlay = cv2.addWeighted(image, 0.7, colored_mask, 0.3, 0)
     return overlay
 
 # Open video
-cap = cv2.VideoCapture("assets/road2.mp4")
+cap = cv2.VideoCapture("assets/road3.mp4")
 
 while True:
     ret, frame = cap.read()
