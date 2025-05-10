@@ -5,7 +5,7 @@ import torch.optim as optim
 import numpy as np
 import cv2
 from torchvision import transforms
-from src.unet import UNet
+from src.unet import UNet, MobileNetV2UNet
 import time
 
 # Set up device
@@ -20,8 +20,8 @@ else:
     print("Using CPU")
 
 # Load the trained model
-model = UNet().to(device)
-model.load_state_dict(torch.load('Models/lane/lane_UNet1_epoch_25.pth', map_location=device))
+model = MobileNetV2UNet().to(device)
+model.load_state_dict(torch.load('Models/lane/lane_UNet1_epoch_70.pth', map_location=device))
 model.eval()
 
 
@@ -52,21 +52,96 @@ def preprocess_image(image, target_size=(256, 128)):
     img_tensor = transform(img).unsqueeze(0).to(device)
     
     return img_tensor, img
-# Function to overlay lane predictions on image
+
+def connect_lanes(lane_mask, min_gap=30, min_length=50):
+    """Connect broken lane segments using directional morphology and line fitting"""
+    # Convert to binary image if needed
+    if lane_mask.dtype is not np.uint8:
+        lane_mask = np.array(lane_mask, np.uint8)
+    if len(lane_mask.shape) == 3:
+        lane_mask = cv2.cvtColor(lane_mask, cv2.COLOR_BGR2GRAY)
+    
+    # 1. Apply initial closing to fill tiny gaps
+    kernel_small = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+    mask_closed = cv2.morphologyEx(lane_mask, cv2.MORPH_CLOSE, kernel_small)
+    
+    # 2. Find connected components
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
+        mask_closed, connectivity=8, ltype=cv2.CV_32S)
+    
+    # 3. Filter small components
+    mask_filtered = np.zeros_like(lane_mask)
+    lane_segments = []
+    
+    for i in range(1, num_labels):  # Skip background (0)
+        if stats[i, cv2.CC_STAT_AREA] > min_length:
+            component_mask = (labels == i).astype(np.uint8) * 255
+            mask_filtered = cv2.bitwise_or(mask_filtered, component_mask)
+            
+            # Store each significant segment
+            contours, _ = cv2.findContours(component_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            if contours:
+                for contour in contours:
+                    if len(contour) >= 2:  # Need at least 2 points
+                        lane_segments.append(contour)
+    
+    # 4. Connect segments using directional morphology (emphasis on vertical connections)
+    kernel_vertical = cv2.getStructuringElement(cv2.MORPH_RECT, (1, min_gap))
+    mask_connected = cv2.dilate(mask_filtered, kernel_vertical)
+    mask_connected = cv2.erode(mask_connected, cv2.getStructuringElement(cv2.MORPH_RECT, (3, 1)))
+    
+    # 5. Optional: Fit curves to segments for smoother connection
+    result_mask = np.zeros_like(lane_mask)
+    
+    # Find connected components after connecting
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(
+        mask_connected, connectivity=8, ltype=cv2.CV_32S)
+    
+    for i in range(1, num_labels):
+        if stats[i, cv2.CC_STAT_AREA] > min_length:
+            component = (labels == i).astype(np.uint8) * 255
+            
+            # Get points from this component
+            y_coords, x_coords = np.where(component > 0)
+            
+            if len(y_coords) > 10:  # Need enough points for curve fitting
+                try:
+                    # Fit polynomial through points
+                    z = np.polyfit(y_coords, x_coords, 2)
+                    p = np.poly1d(z)
+                    
+                    # Draw the fitted curve
+                    for y in range(min(y_coords), max(y_coords) + 1):
+                        x = int(p(y))
+                        if 0 <= x < component.shape[1]:
+                            cv2.circle(result_mask, (x, y), 2, 255, -1)
+                except:
+                    # Fallback if curve fitting fails: use original component
+                    result_mask = cv2.bitwise_or(result_mask, component)
+            else:
+                # Small component, use as is
+                result_mask = cv2.bitwise_or(result_mask, component)
+    
+    # 6. Final cleaning with small closing to smooth the result
+    result_mask = cv2.morphologyEx(result_mask, cv2.MORPH_CLOSE, kernel_small)
+    
+    return result_mask
+
+# Update your overlay_predictions function
 def overlay_predictions(image, prediction, threshold=0.6):
     # Convert prediction to binary mask
     prediction = prediction.squeeze().cpu().detach().numpy()
     lane_mask = (prediction > threshold).astype(np.uint8) * 255
     
     # Resize mask to match the original image size
-    lane_mask = cv2.resize(lane_mask, (image.shape[1], image.shape[0]))
+    lane_mask_resized = cv2.resize(lane_mask, (image.shape[1], image.shape[0]))
+    
+    # Apply lane connection post-processing
+    connected_mask = connect_lanes(lane_mask_resized, min_gap=40, min_length=30)
     
     # Create a colored overlay
     colored_mask = np.zeros_like(image)
-    colored_mask[lane_mask > 0] = [0, 255, 0]  # Green for lane markings
-
-    image, _ = get_bird_eye_view(image, None, src_pts=src_pts, extended_view=True)
-    _, colored_mask = get_bird_eye_view(None, colored_mask, src_pts=src_pts, extended_view=True)
+    colored_mask[connected_mask > 0] = [0, 255, 0]  # Green for lane markings
     
     # Apply the overlay with transparency
     overlay = cv2.addWeighted(image, 0.7, colored_mask, 0.3, 0)
@@ -116,7 +191,7 @@ def get_bird_eye_view(image, mask=None, src_pts=None, dst_pts=None, extended_vie
 
 
 # Open video
-cap = cv2.VideoCapture("assets/seame_data.mp4")
+cap = cv2.VideoCapture(0)
 
 while True:
     ret, frame = cap.read()

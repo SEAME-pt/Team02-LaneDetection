@@ -11,21 +11,23 @@ class MobileNetV2UNet(nn.Module):
         # Load pre-trained MobileNetV2 backbone
         self.backbone = models.mobilenet_v2(weights=MobileNet_V2_Weights.DEFAULT)
         
-        # Get feature layers from MobileNetV2
-        self.down1 = self.backbone.features[:2]    # Output: 16 channels
-        self.down2 = self.backbone.features[2:4]   # Output: 24 channels
-        self.down3 = self.backbone.features[4:7]   # Output: 32 channels
-        self.down4 = self.backbone.features[7:14]  # Output: 96 channels
-        self.down5 = self.backbone.features[14:]   # Output: 320 channels
+        # Get feature layers from MobileNetV2 with CORRECT channels
+        self.down1 = self.backbone.features[:2]      # 16 channels
+        self.down2 = self.backbone.features[2:4]     # 24 channels
+        self.down3 = self.backbone.features[4:7]     # 32 channels
+        self.down4 = self.backbone.features[7:11]    # 64 channels (not 96!)
+        self.down5 = self.backbone.features[11:19]   # 1280 channels (not 320!)
         
-        # Upsampling path
-        self.up1 = up(320 + 96, 96)
-        self.up2 = up(96 + 32, 32)
-        self.up3 = up(32 + 24, 24)
-        self.up4 = up(24 + 16, 16)
+        # Upsampling path with CORRECTED channel counts
+        self.up1 = up(1280 + 64, 256)  # Fix channel count
+        self.up2 = up(256 + 32, 128)   # Fix channel count
+        self.up3 = up(128 + 24, 64)    # Fix channel count
+        self.up4 = up(64 + 16, 32)     # Fix channel count
         
         # Output layer
-        self.outc = outconv(16, output_channels)
+        self.outc = outconv(32, output_channels)
+
+        self.final_upsample = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
         
     def forward(self, x):
         # Downsampling through backbone
@@ -43,6 +45,9 @@ class MobileNetV2UNet(nn.Module):
         
         # Final output
         x = self.outc(x)
+
+        x = self.final_upsample(x)
+        
         return x
 
 class double_conv(nn.Module):
