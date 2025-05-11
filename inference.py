@@ -6,6 +6,7 @@ import numpy as np
 import cv2
 from torchvision import transforms
 from src.unet import UNet, MobileNetV2UNet
+from sklearn.cluster import MeanShift
 import time
 
 # Set up device
@@ -23,6 +24,30 @@ else:
 model = MobileNetV2UNet().to(device)
 model.load_state_dict(torch.load('Models/lane/lane_UNet1_epoch_100.pth', map_location=device))
 model.eval()
+
+def cluster(embeddings, bandwidth=1.5):
+    """Clustering pixel embedding into lanes using MeanShift
+
+    Args:
+        embeddings: set of pixel embeddings
+        bandwidth: bandwidth used in the RBF kernel
+
+    Returns:
+        num_clusters: number of clusters (or lanes)
+        labels: lane labels for each pixel
+        cluster_centers: centroids
+    """
+    ms = MeanShift(bandwidth=bandwidth, bin_seeding=False)
+    try:
+        ms.fit(embeddings)
+    except ValueError as err:
+        return 0, [], []
+
+    labels = ms.labels_
+    cluster_centers = ms.cluster_centers_
+    num_clusters = cluster_centers.shape[0]
+
+    return num_clusters, labels, cluster_centers
 
 # Image preprocessing function
 def preprocess_image(image, target_size=(256, 128)):
@@ -59,9 +84,7 @@ def post_process(lane_mask, kernel_size=5, min_area=100, max_lanes=3):
     colored_lanes = np.zeros((lane_mask.shape[0], lane_mask.shape[1], 3), dtype=np.uint8)
 
     # Fill the pixel gap using Closing operator (dilation followed by erosion)
-    kernel = cv2.getStructuringElement(
-        shape=cv2.MORPH_RECT, ksize=(
-            kernel_size, kernel_size))
+    kernel = cv2.getStructuringElement(shape=cv2.MORPH_RECT, ksize=(kernel_size, kernel_size))
 
     lane_mask = cv2.morphologyEx(lane_mask, cv2.MORPH_CLOSE, kernel)
     
@@ -85,20 +108,87 @@ def post_process(lane_mask, kernel_size=5, min_area=100, max_lanes=3):
             center_x = centroids[i][0]
             valid_components.append((i, center_x))
     
+    # # With this Mean Shift implementation:
+    # if valid_components:
+    #     # Extract x-positions of all valid components
+    #     positions = np.array([x_pos for _, x_pos in valid_components]).reshape(-1, 1)
+        
+    #     # Apply Mean Shift clustering using the cluster function
+    #     num_clusters, labels, centers = cluster(positions)
+        
+    #     if num_clusters > 0:
+    #         # Group components by their cluster
+    #         clusters = {}
+    #         for i, (comp_idx, x_pos) in enumerate(valid_components):
+    #             cluster_id = labels[i]
+    #             if cluster_id not in clusters:
+    #                 clusters[cluster_id] = []
+    #             clusters[cluster_id].append((comp_idx, x_pos))
+            
+    #         # For each cluster, take the component closest to center
+    #         keep_components = []
+    #         for cluster_id, components in clusters.items():
+    #             center = centers[cluster_id][0]
+    #             # Find component closest to cluster center
+    #             closest = min(components, key=lambda x: abs(x[1] - center))
+    #             keep_components.append(closest)
+            
+    #         # Sort final components by position
+    #         keep_components.sort(key=lambda x: x[1])
+    #     else:
+    #         keep_components = []
+    # else:
+    #     keep_components = []
+
     # Sort components by area (largest first)
     area_sorted = sorted(valid_components, key=lambda x: x[1])
-    
     # Keep only the largest max_lanes components
     keep_components = area_sorted[:max_lanes]
     
-    # Color lanes based on their sorted position
+    # For storing lane polylines
+    lane_polylines = []
+    
+    # Process each lane
     for idx, (comp_idx, _) in enumerate(keep_components):
         # Get this lane's mask
-        lane = (labels == comp_idx)
+        lane_mask = (labels == comp_idx).astype(np.uint8) * 255
         
-        # Assign a color based on position (cycle through our 3 colors if more than 3 lanes)
+        # Color fill the lane in the colored mask
+        lane = (labels == comp_idx)
         color = lane_position_colors[min(idx, len(lane_position_colors)-1)]
-        colored_lanes[lane] = color
+        # colored_lanes[lane] = color
+        
+        # Extract lane coordinates for polyline
+        # First, find contours to get a rough outline
+        contours, _ = cv2.findContours(lane_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        
+        if contours:
+            largest_contour = max(contours, key=cv2.contourArea)
+            
+            # Extract main points to represent the lane
+            lane_points = []
+            h, w = lane_mask.shape
+            
+            # Sample points from top to bottom (every 5 pixels)
+            for y in range(0, h, 5):
+                # Find all points at this y-level
+                x_points = np.where(lane_mask[y, :] > 0)[0]
+                if len(x_points) > 0:
+                    # Use the middle point at this y-level
+                    mid_x = (np.min(x_points) + np.max(x_points)) // 2
+                    lane_points.append([mid_x, y])
+            
+            if lane_points:
+                lane_polyline = np.array(lane_points)
+                lane_polylines.append((lane_polyline, color))
+                
+                # Draw the polyline on the colored mask
+                cv2.polylines(
+                    img=colored_lanes,
+                    pts=[lane_polyline],
+                    isClosed=False,
+                    color=color,
+                    thickness=5)
     
     return colored_lanes
     
@@ -119,7 +209,7 @@ def overlay_predictions(image, prediction, threshold=0.5):
     return overlay
 
 # Open video
-cap = cv2.VideoCapture("assets/road3.mp4")
+cap = cv2.VideoCapture("assets/seame_data.mp4")
 
 while True:
     ret, frame = cap.read()
