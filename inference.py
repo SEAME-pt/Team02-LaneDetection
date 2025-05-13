@@ -22,7 +22,7 @@ else:
 
 # Load the trained model
 model = UNet().to(device)
-model.load_state_dict(torch.load('Models/lane/lane_UNet3_epoch_9.pth', map_location=device))
+model.load_state_dict(torch.load('Models/lane/lane_UNet4_epoch_25.pth', map_location=device))
 model.eval()
 
 def cluster(embeddings, bandwidth=1.5):
@@ -159,39 +159,39 @@ def post_process(lane_mask, kernel_size=10, min_area=100, max_lanes=6):
         # Color fill the lane in the colored mask
         lane = (labels == comp_idx)
         color = lane_position_colors[min(idx, len(lane_position_colors)-1)]
-        # colored_lanes[lane] = color
+        colored_lanes[lane] = [0, 255, 0]
         
         # Extract lane coordinates for polyline
         # First, find contours to get a rough outline
-        contours, _ = cv2.findContours(lane_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        # contours, _ = cv2.findContours(lane_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         
-        if contours:
-            largest_contour = max(contours, key=cv2.contourArea)
+        # if contours:
+        #     largest_contour = max(contours, key=cv2.contourArea)
             
-            # Extract main points to represent the lane
-            lane_points = []
-            h, w = lane_mask.shape
+        #     # Extract main points to represent the lane
+        #     lane_points = []
+        #     h, w = lane_mask.shape
             
-            # Sample points from top to bottom (every 5 pixels)
-            for y in range(0, h, 5):
-                # Find all points at this y-level
-                x_points = np.where(lane_mask[y, :] > 0)[0]
-                if len(x_points) > 0:
-                    # Use the middle point at this y-level
-                    mid_x = (np.min(x_points) + np.max(x_points)) // 2
-                    lane_points.append([mid_x, y])
+        #     # Sample points from top to bottom (every 5 pixels)
+        #     for y in range(0, h, 5):
+        #         # Find all points at this y-level
+        #         x_points = np.where(lane_mask[y, :] > 0)[0]
+        #         if len(x_points) > 0:
+        #             # Use the middle point at this y-level
+        #             mid_x = (np.min(x_points) + np.max(x_points)) // 2
+        #             lane_points.append([mid_x, y])
             
-            if lane_points:
-                lane_polyline = np.array(lane_points)
-                lane_polylines.append((lane_polyline, color))
+        #     if lane_points:
+        #         lane_polyline = np.array(lane_points)
+        #         lane_polylines.append((lane_polyline, color))
                 
-                # Draw the polyline on the colored mask
-                cv2.polylines(
-                    img=colored_lanes,
-                    pts=[lane_polyline],
-                    isClosed=False,
-                    color=color,
-                    thickness=5)
+        #         # Draw the polyline on the colored mask
+        #         cv2.polylines(
+        #             img=colored_lanes,
+        #             pts=[lane_polyline],
+        #             isClosed=False,
+        #             color=color,
+        #             thickness=5)
     
     return colored_lanes
     
@@ -212,7 +212,7 @@ def overlay_predictions(image, prediction, threshold=0.5):
     return overlay
 
 # Open video
-cap = cv2.VideoCapture("assets/road3.mp4")
+cap = cv2.VideoCapture("assets/seame_data.mp4")
 
 while True:
     ret, frame = cap.read()

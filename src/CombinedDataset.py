@@ -45,16 +45,17 @@ class CombinedLaneDataset(Dataset):
                 width=sea_config.get('width', 512),
                 height=sea_config.get('height', 256),
                 is_train=sea_config.get('is_train', True),
-                thickness=tusimple_config.get('thickness', 5)
+                thickness=sea_config.get('thickness', 5)
             )
             
         if carla_config:
             self.carla_dataset = CarlaDataset(
+                json_paths=carla_config['json_paths'],
                 img_dir=carla_config['img_dir'],
-                mask_dir=carla_config['mask_dir'],
                 width=carla_config.get('width', 512),
                 height=carla_config.get('height', 256),
                 is_train=carla_config.get('is_train', True),
+                thickness=carla_config.get('thickness', 5)
             )
         
         # Initialize sizes and indices
