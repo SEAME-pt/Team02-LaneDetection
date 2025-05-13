@@ -53,7 +53,7 @@ class CarlaDataset(Dataset):
         for img_file in self.image_files:
             img_base_name = os.path.splitext(img_file)[0]  # Get filename without extension
             
-            mask_file = img_base_name + "_mask.png"
+            mask_file = img_base_name + ".png"
             mask_path = os.path.join(mask_dir, mask_file)
             
             if os.path.exists(mask_path):
@@ -88,7 +88,7 @@ class CarlaDataset(Dataset):
         if mask is None:
             raise ValueError(f"Could not read mask: {mask_path}")
         mask = cv2.resize(mask, (self.width, self.height))
-        bin_labels = (mask > 127).astype(np.float32)[None, ...]
+        bin_labels = (mask > 0).astype(np.float32)[None, ...]
         
         if self.is_train:
             return self.augmentation(image, bin_labels)

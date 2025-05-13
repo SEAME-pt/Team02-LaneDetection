@@ -35,8 +35,8 @@ def main():
     }
 
     carla_config = {
-        'img_dir': '/home/luis_t2/SEAME/Team02-Course/Dataset/Carla/frames',
-        'mask_dir': '/home/luis_t2/SEAME/Team02-Course/Dataset/Carla/masks',
+        'img_dir': '/home/luis_t2/CarlaSimulation/lane_dataset/images',
+        'mask_dir': '/home/luis_t2/CarlaSimulation/lane_dataset/masks',
         'width': input_size[0],
         'height': input_size[1],
         'is_train': True
@@ -70,9 +70,9 @@ def main():
 
     # Calculate weights for equal contribution (adjust percentages as needed)
     total_samples = train_tusimple_size + train_sea_size + train_carla_size
-    tusimple_weight = 0.6 / (train_tusimple_size / total_samples) if train_tusimple_size > 0 else 0
-    sea_weight = 0.25 / (train_sea_size / total_samples) if train_sea_size > 0 else 0
-    carla_weight = 0.25 / (train_carla_size / total_samples) if train_carla_size > 0 else 0
+    tusimple_weight = 0.4 / (train_tusimple_size / total_samples) if train_tusimple_size > 0 else 0
+    sea_weight = 0.2 / (train_sea_size / total_samples) if train_sea_size > 0 else 0
+    carla_weight = 0.4 / (train_carla_size / total_samples) if train_carla_size > 0 else 0
 
     # Apply weights to all samples
     for i in range(train_dataset.train_size):
@@ -101,12 +101,12 @@ def main():
     )
     
     # Initialize model
-    model = MobileNetV2UNet().to(device)
+    model = UNet().to(device)
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=1.5e-4)
     
     # Train model
-    model = train_model(model, train_loader, criterion, optimizer, device, epochs=100)
+    model = train_model(model, train_loader, criterion, optimizer, device, epochs=50)
 
 if __name__ == '__main__':
     main()

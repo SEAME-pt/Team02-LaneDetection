@@ -21,8 +21,8 @@ else:
     print("Using CPU")
 
 # Load the trained model
-model = MobileNetV2UNet().to(device)
-model.load_state_dict(torch.load('Models/lane/lane_UNet1_epoch_100.pth', map_location=device))
+model = UNet().to(device)
+model.load_state_dict(torch.load('Models/lane/lane_UNet3_epoch_9.pth', map_location=device))
 model.eval()
 
 def cluster(embeddings, bandwidth=1.5):
@@ -70,7 +70,7 @@ def preprocess_image(image, target_size=(256, 128)):
     
     return img_tensor, img
     
-def post_process(lane_mask, kernel_size=5, min_area=100, max_lanes=3):
+def post_process(lane_mask, kernel_size=10, min_area=100, max_lanes=6):
     """
     Color lanes based on their horizontal position: left=red, center=yellow, right=green
     """
@@ -94,9 +94,12 @@ def post_process(lane_mask, kernel_size=5, min_area=100, max_lanes=3):
     
     # Define standard colors for lane positions
     lane_position_colors = [
-        [0, 0, 255],    # Left lane: Red
-        [0, 255, 255],  # Center lane: Yellow
-        [0, 255, 0]     # Right lane: Green
+        [0, 0, 255],      # Far left: Red
+        [0, 128, 255],    # Left: Orange
+        [0, 255, 255],    # Center left: Yellow
+        [0, 255, 0],      # Center right: Green
+        [255, 0, 0],      # Right: Blue
+        [255, 0, 255],    # Far right: Purple
     ]
     
     # Create a list of valid components with their centroids
@@ -209,7 +212,7 @@ def overlay_predictions(image, prediction, threshold=0.5):
     return overlay
 
 # Open video
-cap = cv2.VideoCapture("assets/seame_data.mp4")
+cap = cv2.VideoCapture("assets/road3.mp4")
 
 while True:
     ret, frame = cap.read()
