@@ -21,8 +21,8 @@ else:
     print("Using CPU")
 
 # Load the trained model
-model = UNet().to(device)
-model.load_state_dict(torch.load('Models/lane/lane_UNet4_epoch_25.pth', map_location=device))
+model = MobileNetV2UNet().to(device)
+model.load_state_dict(torch.load('Models/lane/lane_Mob1_epoch_48.pth', map_location=device))
 model.eval()
 
 def cluster(embeddings, bandwidth=1.5):
@@ -212,7 +212,7 @@ def overlay_predictions(image, prediction, threshold=0.5):
     return overlay
 
 # Open video
-cap = cv2.VideoCapture("assets/seame_data.mp4")
+cap = cv2.VideoCapture("assets/road3.mp4")
 
 while True:
     ret, frame = cap.read()
