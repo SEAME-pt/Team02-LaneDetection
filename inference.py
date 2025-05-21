@@ -6,7 +6,7 @@ import numpy as np
 import cv2
 from torchvision import transforms
 from src.unet import UNet, MobileNetV2UNet
-from sklearn.cluster import MeanShift
+from src.YoloSeg import YOLOPSeg
 import time
 
 # Set up device
@@ -21,33 +21,9 @@ else:
     print("Using CPU")
 
 # Load the trained model
-model = MobileNetV2UNet().to(device)
-model.load_state_dict(torch.load('Models/lane/lane_Mob1_epoch_48.pth', map_location=device))
+model = YOLOPSeg().to(device)
+model.load_state_dict(torch.load('Models/lane/lane_Mob2_epoch_12.pth', map_location=device))
 model.eval()
-
-def cluster(embeddings, bandwidth=1.5):
-    """Clustering pixel embedding into lanes using MeanShift
-
-    Args:
-        embeddings: set of pixel embeddings
-        bandwidth: bandwidth used in the RBF kernel
-
-    Returns:
-        num_clusters: number of clusters (or lanes)
-        labels: lane labels for each pixel
-        cluster_centers: centroids
-    """
-    ms = MeanShift(bandwidth=bandwidth, bin_seeding=False)
-    try:
-        ms.fit(embeddings)
-    except ValueError as err:
-        return 0, [], []
-
-    labels = ms.labels_
-    cluster_centers = ms.cluster_centers_
-    num_clusters = cluster_centers.shape[0]
-
-    return num_clusters, labels, cluster_centers
 
 # Image preprocessing function
 def preprocess_image(image, target_size=(256, 128)):
@@ -110,38 +86,6 @@ def post_process(lane_mask, kernel_size=10, min_area=100, max_lanes=6):
             # Get centroid x-position
             center_x = centroids[i][0]
             valid_components.append((i, center_x))
-    
-    # # With this Mean Shift implementation:
-    # if valid_components:
-    #     # Extract x-positions of all valid components
-    #     positions = np.array([x_pos for _, x_pos in valid_components]).reshape(-1, 1)
-        
-    #     # Apply Mean Shift clustering using the cluster function
-    #     num_clusters, labels, centers = cluster(positions)
-        
-    #     if num_clusters > 0:
-    #         # Group components by their cluster
-    #         clusters = {}
-    #         for i, (comp_idx, x_pos) in enumerate(valid_components):
-    #             cluster_id = labels[i]
-    #             if cluster_id not in clusters:
-    #                 clusters[cluster_id] = []
-    #             clusters[cluster_id].append((comp_idx, x_pos))
-            
-    #         # For each cluster, take the component closest to center
-    #         keep_components = []
-    #         for cluster_id, components in clusters.items():
-    #             center = centers[cluster_id][0]
-    #             # Find component closest to cluster center
-    #             closest = min(components, key=lambda x: abs(x[1] - center))
-    #             keep_components.append(closest)
-            
-    #         # Sort final components by position
-    #         keep_components.sort(key=lambda x: x[1])
-    #     else:
-    #         keep_components = []
-    # else:
-    #     keep_components = []
 
     # Sort components by area (largest first)
     area_sorted = sorted(valid_components, key=lambda x: x[1])
@@ -212,7 +156,7 @@ def overlay_predictions(image, prediction, threshold=0.5):
     return overlay
 
 # Open video
-cap = cv2.VideoCapture("assets/road3.mp4")
+cap = cv2.VideoCapture("assets/seame_data.mp4")
 
 while True:
     ret, frame = cap.read()

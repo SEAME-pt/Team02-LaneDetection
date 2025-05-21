@@ -5,6 +5,7 @@ import torch.optim as optim
 from src.CombinedDataset import CombinedLaneDataset
 from src.train import train_model
 from src.unet import UNet, MobileNetV2UNet
+from src.YoloSeg import YOLOPSeg
 import os
 import numpy as np
 
@@ -35,8 +36,9 @@ def main():
     }
 
     carla_config = {
-        'json_paths': ["/home/luis_t2/SEAME/Team02-Course/Dataset/Carla/lane_dataset/lane_annotations.json"],
-        'img_dir': '/home/luis_t2/SEAME/Team02-Course/Dataset/Carla/lane_dataset/frames',
+        'json_paths': ["/home/luis_t2/carla/PythonAPI/CARLANE/CARLANE Dataset Tools/CARLA Lane Generator/TuLane/data/carla/Town04.json",
+                       "/home/luis_t2/carla/PythonAPI/CARLANE/CARLANE Dataset Tools/CARLA Lane Generator/TuLane/data/carla/Town05.json"],
+        'img_dir': '/home/luis_t2/carla/PythonAPI/CARLANE/CARLANE Dataset Tools/CARLA Lane Generator/TuLane/data/carla',
         'width': input_size[0],
         'height': input_size[1],
         'is_train': True,
@@ -102,7 +104,7 @@ def main():
     )
     
     # Initialize model
-    model = MobileNetV2UNet().to(device)
+    model = YOLOPSeg().to(device)
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=1.5e-4)
     

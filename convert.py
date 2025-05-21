@@ -20,12 +20,12 @@ else:
 
 # Load the trained model
 model = MobileNetV2UNet().to(device)
-model.load_state_dict(torch.load('Models/lane/lane_Mob1_epoch_48.pth', map_location=device))
+model.load_state_dict(torch.load('Models/lane/lane_Mob2_epoch_50.pth', map_location=device))
 model.eval()
 
 dummy_input = torch.randn(1, 3, 128, 256).to(device)  
 
-onnx_file_path = "Models/onnx/lane_Mob1_epoch_48.onnx"
+onnx_file_path = "Models/onnx/lane_Mob2_epoch_50.onnx"
 torch.onnx.export(
     model,                       # PyTorch model instance
     dummy_input,                 # Input to the model
