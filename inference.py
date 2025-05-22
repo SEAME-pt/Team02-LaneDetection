@@ -22,7 +22,7 @@ else:
 
 # Load the trained model
 model = YOLOPSeg().to(device)
-model.load_state_dict(torch.load('Models/lane/lane_Mob2_epoch_12.pth', map_location=device))
+model.load_state_dict(torch.load('Models/lane/lane_Yolo2_epoch_45.pth', map_location=device))
 model.eval()
 
 # Image preprocessing function
