@@ -16,7 +16,7 @@ class LaneDetectionAugmentation:
             A.Resize(height=self.height, width=self.width),
             
             # Basic spatial transforms - increase rotation range for sharp turns
-            A.HorizontalFlip(p=0.6),
+            A.HorizontalFlip(p=0.3),
 
             # This will move lanes left/right by up to 30% of image width
             A.OneOf([
@@ -43,7 +43,7 @@ class LaneDetectionAugmentation:
                 ),
             ], p=0.8),
 
-            A.Affine(scale=(0.95, 1.05), translate_percent=0.05, rotate=(-80, 80), p=0.5),
+            A.Affine(scale=(0.95, 1.05), translate_percent=0.05, rotate=(-25, 25), p=0.2),
             
             # Moderate color transforms
             A.OneOf([

@@ -6,6 +6,7 @@ from src.CombinedDataset import CombinedLaneDataset
 from src.train import train_model
 from src.unet import UNet, MobileNetV2UNet
 from src.YoloSeg import YOLOPSeg
+from src.CarlaDataset import CarlaDataset
 import os
 import numpy as np
 
@@ -21,7 +22,7 @@ def main():
         device = torch.device("cpu")
         print("Using CPU")
 
-    input_size = (256, 128)
+    input_size = (512, 256)
 
     # Your dataset configs
     tusimple_config = {
@@ -32,17 +33,17 @@ def main():
         'width': input_size[0],
         'height': input_size[1],
         'is_train': True,
-        'thickness': 3
+        'thickness': 5
     }
 
     carla_config = {
         'json_paths': ["/home/luis_t2/carla/PythonAPI/CARLANE/CARLANE Dataset Tools/CARLA Lane Generator/TuLane/data/carla/Town04.json",
-                       "/home/luis_t2/carla/PythonAPI/CARLANE/CARLANE Dataset Tools/CARLA Lane Generator/TuLane/data/carla/Town05.json"],
+                       "/home/luis_t2/carla/PythonAPI/CARLANE/CARLANE Dataset Tools/CARLA Lane Generator/TuLane/data/carla/Town06.json"],
         'img_dir': '/home/luis_t2/carla/PythonAPI/CARLANE/CARLANE Dataset Tools/CARLA Lane Generator/TuLane/data/carla',
         'width': input_size[0],
         'height': input_size[1],
         'is_train': True,
-        'thickness': 3
+        'thickness': 5
     }
     
     sea_config = {
@@ -51,7 +52,7 @@ def main():
         'width': input_size[0],
         'height': input_size[1],
         'is_train': True,
-        'thickness': 3
+        'thickness': 5
     }
     
     # Create the combined dataset with built-in train/val split
@@ -95,14 +96,30 @@ def main():
 
     print(f"Created weighted sampler: TuSimple={tusimple_weight:.4f}, SEA={sea_weight:.4f}, Carla={carla_weight:.4f}")
 
-    # Create dataloaders
+    # # Create dataloaders
+    # train_loader = DataLoader(
+    #     train_dataset, 
+    #     batch_size=8, 
+    #     sampler=sampler,
+    #     num_workers=os.cpu_count() // 2
+    # )
+
+    # train_dataset = CarlaDataset(
+    #     json_paths=carla_config['json_paths'],
+    #     img_dir=carla_config['img_dir'],
+    #     width=carla_config.get('width', 512),
+    #     height=carla_config.get('height', 256),
+    #     is_train=carla_config.get('is_train', True),
+    #     thickness=carla_config.get('thickness', 5)
+    # )
+
     train_loader = DataLoader(
         train_dataset, 
         batch_size=8, 
-        sampler=sampler,
+        shuffle=True,
         num_workers=os.cpu_count() // 2
     )
-    
+
     # Initialize model
     model = YOLOPSeg().to(device)
     criterion = nn.BCEWithLogitsLoss()
