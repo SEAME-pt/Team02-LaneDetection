@@ -22,7 +22,7 @@ def main():
         device = torch.device("cpu")
         print("Using CPU")
 
-    input_size = (512, 256)
+    input_size = (256, 128)
 
     # Your dataset configs
     tusimple_config = {

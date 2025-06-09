@@ -48,3 +48,4 @@ src/assets/*
 src/__pycache__/*
 Models/
 .env
+training_log.txt
