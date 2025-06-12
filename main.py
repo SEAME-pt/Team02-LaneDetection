@@ -22,7 +22,7 @@ def main():
         device = torch.device("cpu")
         print("Using CPU")
 
-    input_size = (256, 128)
+    input_size = (1024, 512)
 
     # Your dataset configs
     tusimple_config = {
@@ -75,8 +75,8 @@ def main():
     # Calculate weights for equal contribution (adjust percentages as needed)
     total_samples = train_tusimple_size + train_sea_size + train_carla_size
     tusimple_weight = 0.5 / (train_tusimple_size / total_samples) if train_tusimple_size > 0 else 0
-    sea_weight = 0.2 / (train_sea_size / total_samples) if train_sea_size > 0 else 0
-    carla_weight = 0.3 / (train_carla_size / total_samples) if train_carla_size > 0 else 0
+    sea_weight = 0.0 / (train_sea_size / total_samples) if train_sea_size > 0 else 0
+    carla_weight = 0.5 / (train_carla_size / total_samples) if train_carla_size > 0 else 0
 
     # Apply weights to all samples
     for i in range(train_dataset.train_size):
@@ -96,13 +96,13 @@ def main():
 
     print(f"Created weighted sampler: TuSimple={tusimple_weight:.4f}, SEA={sea_weight:.4f}, Carla={carla_weight:.4f}")
 
-    # # Create dataloaders
-    # train_loader = DataLoader(
-    #     train_dataset, 
-    #     batch_size=8, 
-    #     sampler=sampler,
-    #     num_workers=os.cpu_count() // 2
-    # )
+    # Create dataloaders
+    train_loader = DataLoader(
+        train_dataset, 
+        batch_size=8, 
+        sampler=sampler,
+        num_workers=os.cpu_count() // 2
+    )
 
     # train_dataset = CarlaDataset(
     #     json_paths=carla_config['json_paths'],
@@ -113,12 +113,12 @@ def main():
     #     thickness=carla_config.get('thickness', 5)
     # )
 
-    train_loader = DataLoader(
-        train_dataset, 
-        batch_size=8, 
-        shuffle=True,
-        num_workers=os.cpu_count() // 2
-    )
+    # train_loader = DataLoader(
+    #     train_dataset, 
+    #     batch_size=8, 
+    #     shuffle=True,
+    #     num_workers=os.cpu_count() // 2
+    # )
 
     # Initialize model
     model = YOLOPSeg().to(device)
