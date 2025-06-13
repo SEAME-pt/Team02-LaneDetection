@@ -22,7 +22,7 @@ def main():
         device = torch.device("cpu")
         print("Using CPU")
 
-    input_size = (1024, 512)
+    input_size = (512, 256)
 
     # Your dataset configs
     tusimple_config = {
@@ -58,7 +58,7 @@ def main():
     # Create the combined dataset with built-in train/val split
     combined_dataset = CombinedLaneDataset(
         tusimple_config=tusimple_config, 
-        sea_config=sea_config, 
+        # sea_config=sea_config, 
         carla_config=carla_config,
         val_split=0.0
     )
@@ -66,43 +66,43 @@ def main():
     # Get train and val datasets
     train_dataset = combined_dataset.get_train_dataset()
 
-    # Create weights array for TRAINING data only
-    train_tusimple_size = train_dataset.tusimple_train_size
-    train_sea_size = train_dataset.sea_train_size
-    train_carla_size = train_dataset.carla_train_size
-    weights = np.zeros(train_dataset.train_size)
+    # # Create weights array for TRAINING data only
+    # train_tusimple_size = train_dataset.tusimple_train_size
+    # # train_sea_size = train_dataset.sea_train_size
+    # train_carla_size = train_dataset.carla_train_size
+    # weights = np.zeros(train_dataset.train_size)
 
-    # Calculate weights for equal contribution (adjust percentages as needed)
-    total_samples = train_tusimple_size + train_sea_size + train_carla_size
-    tusimple_weight = 0.5 / (train_tusimple_size / total_samples) if train_tusimple_size > 0 else 0
-    sea_weight = 0.0 / (train_sea_size / total_samples) if train_sea_size > 0 else 0
-    carla_weight = 0.5 / (train_carla_size / total_samples) if train_carla_size > 0 else 0
+    # # Calculate weights for equal contribution (adjust percentages as needed)
+    # total_samples = train_tusimple_size + train_carla_size
+    # tusimple_weight = 0.5 / (train_tusimple_size / total_samples) if train_tusimple_size > 0 else 0
+    # # sea_weight = 0.0 / (train_sea_size / total_samples) if train_sea_size > 0 else 0
+    # carla_weight = 0.5 / (train_carla_size / total_samples) if train_carla_size > 0 else 0
 
-    # Apply weights to all samples
-    for i in range(train_dataset.train_size):
-        if i < train_tusimple_size:
-            weights[i] = tusimple_weight
-        elif i < train_tusimple_size + train_sea_size:
-            weights[i] = sea_weight
-        else:
-            weights[i] = carla_weight
+    # # Apply weights to all samples
+    # for i in range(train_dataset.train_size):
+    #     if i < train_tusimple_size:
+    #         weights[i] = tusimple_weight
+    #     # elif i < train_tusimple_size + train_sea_size:
+    #     #     weights[i] = sea_weight
+    #     else:
+    #         weights[i] = carla_weight
 
-    # Create sampler for TRAINING only
-    sampler = WeightedRandomSampler(
-        weights=weights,
-        num_samples=len(weights),
-        replacement=True
-    )
+    # # Create sampler for TRAINING only
+    # sampler = WeightedRandomSampler(
+    #     weights=weights,
+    #     num_samples=len(weights),
+    #     replacement=True
+    # )
 
-    print(f"Created weighted sampler: TuSimple={tusimple_weight:.4f}, SEA={sea_weight:.4f}, Carla={carla_weight:.4f}")
+    # print(f"Created weighted sampler: TuSimple={tusimple_weight:.4f}, SEA={sea_weight:.4f}, Carla={carla_weight:.4f}")
 
-    # Create dataloaders
-    train_loader = DataLoader(
-        train_dataset, 
-        batch_size=8, 
-        sampler=sampler,
-        num_workers=os.cpu_count() // 2
-    )
+    # # Create dataloaders
+    # train_loader = DataLoader(
+    #     train_dataset, 
+    #     batch_size=8, 
+    #     sampler=sampler,
+    #     num_workers=os.cpu_count() // 2
+    # )
 
     # train_dataset = CarlaDataset(
     #     json_paths=carla_config['json_paths'],
@@ -113,12 +113,12 @@ def main():
     #     thickness=carla_config.get('thickness', 5)
     # )
 
-    # train_loader = DataLoader(
-    #     train_dataset, 
-    #     batch_size=8, 
-    #     shuffle=True,
-    #     num_workers=os.cpu_count() // 2
-    # )
+    train_loader = DataLoader(
+        train_dataset, 
+        batch_size=8, 
+        shuffle=True,
+        num_workers=os.cpu_count() // 2
+    )
 
     # Initialize model
     model = YOLOPSeg().to(device)
@@ -126,7 +126,7 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=1.5e-4)
     
     # Train model
-    model = train_model(model, train_loader, criterion, optimizer, device, epochs=50)
+    model = train_model(model, train_loader, criterion, optimizer, device, epochs=25)
 
 if __name__ == '__main__':
     main()
