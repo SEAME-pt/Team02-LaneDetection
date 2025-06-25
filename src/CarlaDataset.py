@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import torch
 import torchvision.transforms as transforms
-from src.augmentation import LaneDetectionAugmentation
+from src.augmentation.augmentation import LaneDetectionAugmentation
 from torch.utils.data import Dataset
 
 def get_binary_labels(height, width, pts, thickness=5):
@@ -151,7 +151,7 @@ def visualize_sample(image, mask):
     
     return result
 
-input_size = (256, 128)
+input_size = (256, 256)
 
 def main():
     carla_config = {
@@ -160,8 +160,8 @@ def main():
         'img_dir': '/home/luis_t2/carla/PythonAPI/CARLANE/CARLANE Dataset Tools/CARLA Lane Generator/TuLane/data/carla',
         'width': input_size[0],
         'height': input_size[1],
-        'is_train': True,
-        'thickness': 3
+        'is_train': False,
+        'thickness': 6
     }
     
     # Load dataset
@@ -197,7 +197,7 @@ def main():
                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
         
         # Show image - using the same window name each time
-        cv2.imshow(WINDOW_NAME, vis_image)
+        cv2.imshow(WINDOW_NAME, cv2.cvtColor(vis_image, cv2.COLOR_RGB2BGR))
         
         # Wait for key press
         key = cv2.waitKey(0) & 0xFF

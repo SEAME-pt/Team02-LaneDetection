@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import torch
 import torchvision.transforms as transforms
-from src.augmentation import LaneDetectionAugmentation
+from src.augmentation.augmentation import LaneDetectionAugmentation
 from torch.utils.data import Dataset
 
 def get_binary_labels(height, width, pts, thickness=5):
@@ -153,12 +153,12 @@ def visualize_sample(image, mask):
 
 def main():
     sea_config = {
-        'json_paths': ["/home/luis_t2/SEAME/Team02-Course/Dataset/SEAME/lane_annotations.json"],
-        'img_dir': '/home/luis_t2/SEAME/Team02-Course/Dataset/SEAME/frames',
-        'width': 1280,
-        'height': 1080,
+        'json_paths': ["/home/luis_t2/SEAME/Team02-Course/Dataset/SEAME/lane_annotations2.json"],
+        'img_dir': '/home/luis_t2/SEAME/Team02-Course/Dataset/SEAME/frames2',
+        'width': 384,
+        'height': 384,
         'is_train': False,
-        'thickness': 3
+        'thickness': 12
     }
     
     # Load dataset
@@ -194,7 +194,7 @@ def main():
                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
         
         # Show image - using the same window name each time
-        cv2.imshow(WINDOW_NAME, vis_image)
+        cv2.imshow(WINDOW_NAME, cv2.cvtColor(vis_image, cv2.COLOR_RGB2BGR))
         
         # Wait for key press
         key = cv2.waitKey(0) & 0xFF

@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import torch
 import torchvision.transforms as transforms
-from src.augmentation import LaneDetectionAugmentation
+from src.augmentation.augmentation import LaneDetectionAugmentation
 from torch.utils.data import Dataset
 
 def get_binary_labels(height, width, pts, thickness=5):
@@ -112,3 +112,101 @@ class TuSimpleDataset(Dataset):
         else:
             image = self.transform(image)
             return image, bin_labels
+        
+
+def visualize_sample(image, mask):
+    """Visualize a single image-mask pair"""
+    
+    # Convert tensor to numpy if needed
+    if isinstance(image, torch.Tensor):
+        # Denormalize
+        mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
+        std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
+        image = image * std + mean
+        image = image.permute(1, 2, 0).cpu().numpy()
+        image = np.clip(image * 255, 0, 255).astype(np.uint8)
+    
+    # Process mask
+    if isinstance(mask, torch.Tensor):
+        mask = mask.squeeze().cpu().numpy()
+    else:
+        mask = mask.squeeze()
+    
+    # Create visualization mask (green channel for lanes)
+    mask_viz = np.zeros_like(image)
+    mask_viz[:, :, 1] = mask * 255
+    
+    # Create overlay
+    overlay = cv2.addWeighted(image, 0.7, mask_viz, 0.3, 0)
+    
+    # Stack images horizontally
+    result = np.hstack((image, mask_viz, overlay))
+    
+    # Add labels
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    h, w = image.shape[:2]
+    cv2.putText(result, "Original", (10, 30), font, 1, (255, 255, 255), 2)
+    cv2.putText(result, "Lane Mask", (w + 10, 30), font, 1, (255, 255, 255), 2)
+    cv2.putText(result, "Overlay", (2*w + 10, 30), font, 1, (255, 255, 255), 2)
+    
+    return result
+
+def main():
+    tusimple_config = {
+        'json_paths': ["/home/luis_t2/SEAME/TUSimple/train_set/label_data_0313.json",
+                      "/home/luis_t2/SEAME/TUSimple/train_set/label_data_0531.json",
+                      "/home/luis_t2/SEAME/TUSimple/train_set/label_data_0601.json"],
+        'img_dir': '/home/luis_t2/SEAME/TUSimple/train_set/',
+        'width': 384,
+        'height': 384,
+        'is_train': False,
+        'thickness': 8
+    }
+
+    # Load dataset
+    dataset = TuSimpleDataset(**tusimple_config)
+    print(f"Loaded Carla dataset with {len(dataset)} samples")
+    
+    # Visualization loop
+    idx = 0
+    total_samples = len(dataset)
+    
+    # Create a fixed window name
+    WINDOW_NAME = "TUSimple Dataset Visualization"
+    
+    print("\nControls:")
+    print("  'n' - Next image")
+    print("  'p' - Previous image")
+    print("  'q' - Quit")
+    
+    # Create the window once
+    cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
+    
+    while True:
+        # Get sample
+        image, mask = dataset[idx]
+        
+        # Create visualization
+        vis_image = visualize_sample(image, mask)
+        
+        # Add sample count to the image instead of the window title
+        h, w = vis_image.shape[:2]
+        status_text = f"Sample: {idx+1}/{total_samples}"
+        cv2.putText(vis_image, status_text, (w//2 - 80, 30), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+        
+        # Show image - using the same window name each time
+        cv2.imshow(WINDOW_NAME, cv2.cvtColor(vis_image, cv2.COLOR_RGB2BGR))
+        key = cv2.waitKey(0) & 0xFF
+        
+        if key == ord('q'):  # Quit
+            break
+        elif key == ord('n'):  # Next
+            idx = (idx + 1) % total_samples
+        elif key == ord('p'):  # Previous
+            idx = (idx - 1) % total_samples
+    
+    cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    main()
