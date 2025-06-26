@@ -24,14 +24,14 @@ def main():
         device = torch.device("cpu")
         print("Using CPU")
 
-    input_size = (384, 384)
-    thickness = 8
-    batch_size = 8
+    input_size = (256, 256)
+    thickness = 12
+    batch_size = 4
 
-    # learning_rate = 1e-5
-    # model_name = 'Models/lane/lane_Yolo_local_pretrained_carla1_epoch_'
-    learning_rate = 1.5e-4
-    model_name = 'Models/lane/lane_Mob_local_tusimple1_epoch_'
+    learning_rate = 1e-5
+    model_name = 'Models/lane/lane_Mob_local_pretrained_tusimple2_epoch_'
+    # learning_rate = 1.5e-4
+    # model_name = 'Models/lane/lane_Mob_local_tusimple2_epoch_'
 
     # # Your dataset configs
     tusimple_config = {
@@ -73,23 +73,23 @@ def main():
     #     thickness=carla_config.get('thickness', 5)
     # )
 
-    # train_dataset = SEAMEDataset(
-    #     json_paths=sea_config['json_paths'],
-    #     img_dir=sea_config['img_dir'],
-    #     width=sea_config.get('width', 512),
-    #     height=sea_config.get('height', 256),
-    #     is_train=sea_config.get('is_train', True),
-    #     thickness=sea_config.get('thickness', 5)
-    # )
-
-    train_dataset = TuSimpleDataset(
-        json_paths=tusimple_config['json_paths'],
-        img_dir=tusimple_config['img_dir'],
-        width=tusimple_config.get('width', 512),
-        height=tusimple_config.get('height', 256),
-        is_train=tusimple_config.get('is_train', True),
-        thickness=tusimple_config.get('thickness', 5)
+    train_dataset = SEAMEDataset(
+        json_paths=sea_config['json_paths'],
+        img_dir=sea_config['img_dir'],
+        width=sea_config.get('width', 512),
+        height=sea_config.get('height', 256),
+        is_train=sea_config.get('is_train', True),
+        thickness=sea_config.get('thickness', 5)
     )
+
+    # train_dataset = TuSimpleDataset(
+    #     json_paths=tusimple_config['json_paths'],
+    #     img_dir=tusimple_config['img_dir'],
+    #     width=tusimple_config.get('width', 512),
+    #     height=tusimple_config.get('height', 256),
+    #     is_train=tusimple_config.get('is_train', True),
+    #     thickness=tusimple_config.get('thickness', 5)
+    # )
 
     train_loader = DataLoader(
         train_dataset, 
@@ -100,13 +100,13 @@ def main():
 
     # Initialize model
     model = MobileNetV2UNet().to(device)
-    # model.load_state_dict(torch.load('Models/lane/lane_Yolo_local_tusimple1_epoch_40.pth'))
+    model.load_state_dict(torch.load('Models/lane/lane_Mob_local_tusimple2_epoch_25.pth'))
     criterion = nn.BCEWithLogitsLoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    # optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-4)
+    # optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-4)
     
     # Train model
-    model = train_model(model, model_name, train_loader, criterion, optimizer, device, epochs=50)
+    model = train_model(model, model_name, train_loader, criterion, optimizer, device, epochs=20)
 
 if __name__ == '__main__':
     main()
