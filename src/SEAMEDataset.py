@@ -153,11 +153,11 @@ def visualize_sample(image, mask):
 
 def main():
     sea_config = {
-        'json_paths': ["/home/luis_t2/SEAME/Team02-Course/Dataset/SEAME/lane_annotations2.json"],
-        'img_dir': '/home/luis_t2/SEAME/Team02-Course/Dataset/SEAME/frames2',
+        'json_paths': ["/home/luis_t2/SEAME/Team02-Course/Dataset/SEAME/lane_annotations.json"],
+        'img_dir': '/home/luis_t2/SEAME/Team02-Course/Dataset/SEAME/frames',
         'width': 384,
         'height': 384,
-        'is_train': False,
+        'is_train': True,
         'thickness': 12
     }
     

@@ -21,12 +21,12 @@ else:
 
 # Load the trained model
 model = YOLOPSeg().to(device)
-model.load_state_dict(torch.load('Models/lane/lane_Yolo_local_pretrained_tusimple1_epoch_50.pth', map_location=device))
+model.load_state_dict(torch.load('Models/lane/lane_Yolo_local_pretrained_carla1_epoch_20.pth', map_location=device))
 model.eval()
 
 dummy_input = torch.randn(1, 3, 384, 384).to(device)  
 
-onnx_file_path = "Models/onnx/lane_Yolo_local_pretrained_tusimple1_epoch_50.onnx"
+onnx_file_path = "Models/onnx/lane_Yolo_local_pretrained_tusimple2_epoch_20.onnx"
 torch.onnx.export(
     model,                       # PyTorch model instance
     dummy_input,                 # Input to the model
@@ -37,7 +37,7 @@ torch.onnx.export(
     input_names=['input'],      # Names for the input tensors
     output_names=['output'],    # Names for the output tensors
     dynamic_axes={
-        'input': {0: 'batch_size'},   # Variable batch size
+        'input': {0: 'batch_size'},
         'output': {0: 'batch_size'}
     }
 )

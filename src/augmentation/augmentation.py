@@ -52,9 +52,6 @@ class LaneDetectionAugmentation:
                 A.RGBShift(r_shift_limit=15, g_shift_limit=15, b_shift_limit=15, p=0.5)  # Subtle color shifts
             ], p=0.5),
             
-            # Mild perspective transform to simulate camera angle changes
-            # A.Perspective(scale=(0.05, 0.15), keep_size=True, fit_output=True, p=0.5),
-            
             # Light blur to simulate motion/focus issues
             A.OneOf([
                 A.MotionBlur(blur_limit=(3, 3)),
