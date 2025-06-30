@@ -29,7 +29,7 @@ def main():
     batch_size = 4
 
     learning_rate = 1e-5
-    model_name = 'Models/lane/lane_Mob_local_pretrained_tusimple2_epoch_'
+    model_name = 'Models/lane/lane_Mob_local_pretrained_tusimple3_epoch_'
     # learning_rate = 1.5e-4
     # model_name = 'Models/lane/lane_Mob_local_tusimple2_epoch_'
 
@@ -106,7 +106,7 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-4)
     
     # Train model
-    model = train_model(model, model_name, train_loader, criterion, optimizer, device, epochs=20)
+    model = train_model(model, model_name, train_loader, criterion, optimizer, device, epochs=30)
 
 if __name__ == '__main__':
     main()
