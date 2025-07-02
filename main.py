@@ -24,14 +24,14 @@ def main():
         device = torch.device("cpu")
         print("Using CPU")
 
-    input_size = (256, 256)
-    thickness = 12
+    input_size = (256, 128)
+    thickness = 10
     batch_size = 4
 
     learning_rate = 1e-5
-    model_name = 'Models/lane/lane_Mob_local_pretrained_tusimple3_epoch_'
+    model_name = 'Models/lane/lane_Mob_local_pretrained_tusimple4_epoch_'
     # learning_rate = 1.5e-4
-    # model_name = 'Models/lane/lane_Mob_local_tusimple2_epoch_'
+    # model_name = 'Models/lane/lane_Mob_local_tusimple3_epoch_'
 
     # # Your dataset configs
     tusimple_config = {
@@ -100,7 +100,7 @@ def main():
 
     # Initialize model
     model = MobileNetV2UNet().to(device)
-    model.load_state_dict(torch.load('Models/lane/lane_Mob_local_tusimple2_epoch_25.pth'))
+    model.load_state_dict(torch.load('Models/lane/lane_Mob_local_tusimple3_epoch_30.pth'))
     criterion = nn.BCEWithLogitsLoss()
     # optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-4)
