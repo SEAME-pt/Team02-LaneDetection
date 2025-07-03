@@ -24,7 +24,7 @@ model = MobileNetV2UNet().to(device)
 model.load_state_dict(torch.load('Models/lane/lane_Mob_local_pretrained_tusimple4_epoch_30.pth', map_location=device))
 model.eval()
 
-dummy_input = torch.randn(1, 3, 256, 128).to(device)  
+dummy_input = torch.randn(1, 3, 128, 256).to(device)  
 
 onnx_file_path = "Models/onnx/lane_Mob_local_pretrained_tusimple4_epoch_30.onnx"
 torch.onnx.export(
